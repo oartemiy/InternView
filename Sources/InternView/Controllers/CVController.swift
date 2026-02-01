@@ -9,30 +9,75 @@ import Fluent
 import Vapor
 
 struct CVController: RouteCollection {
-    func boot(routes: any Vapor.RoutesBuilder) throws {
-        let cvGroup = routes.grouped("CVs")
+    func boot(routes: RoutesBuilder) throws {
+        let cvGroup = routes.grouped("cvs")
         cvGroup.post(use: createHandler)
         cvGroup.get(use: getAllHandler)
-        cvGroup.get(":cvID", use: getHandler)
+        cvGroup.get(":cvId", use: getHandler)
+        cvGroup.put(":cvId", use: updateHandler)
+        cvGroup.delete(":cvId", use: deleteHandler)
     }
-    
-    func createHandler(_ req: Request) async throws -> CV {
-        guard let cv = try? req.content.decode(CV.self) else {
-            throw Abort(.badRequest, reason: "It is impossible to decode the CV model")
-        }
+
+    // Создание CV
+    func createHandler(_ req: Request) async throws -> CV.ResponseDTO {
+        let createDTO = try req.content.decode(CV.CreateUpdateDTO.self)
+        let cv = CV(from: createDTO)
         try await cv.save(on: req.db)
-        return cv
+        return cv.toResponseDTO()
     }
-    
-    func getAllHandler(_ req: Request) async throws -> [CV] {
+
+    // Получение всех CV
+    func getAllHandler(_ req: Request) async throws -> [CV.ResponseDTO] {
         let cvs = try await CV.query(on: req.db).all()
-        return cvs
+        return cvs.map { $0.toResponseDTO() }
     }
-    
-    func getHandler(_ req: Request) async throws -> CV {
-        guard let cv = try await CV.find(req.parameters.get("cvID"), on: req.db) else {
+
+    // Получение конкретного CV
+    func getHandler(_ req: Request) async throws -> CV.ResponseDTO {
+        guard let cvId = req.parameters.get("cvId", as: UUID.self) else {
+            throw Abort(.badRequest, reason: "Invalid CV ID format")
+        }
+
+        guard let cv = try await CV.find(cvId, on: req.db) else {
             throw Abort(.notFound, reason: "CV with this ID does not exist")
         }
-        return cv
+
+        return cv.toResponseDTO()
+    }
+
+    // Обновление CV - ВАЖНО: используем content.decode
+    func updateHandler(_ req: Request) async throws -> CV.ResponseDTO {
+        guard let cvId = req.parameters.get("cvId", as: UUID.self) else {
+            throw Abort(.badRequest, reason: "Invalid CV ID format")
+        }
+
+        // Декодируем JSON из тела запроса
+        let updateDTO = try req.content.decode(CV.CreateUpdateDTO.self)
+
+        guard let cv = try await CV.find(cvId, on: req.db) else {
+            throw Abort(.notFound, reason: "CV with this ID does not exist")
+        }
+
+        cv.title = updateDTO.title
+        cv.description = updateDTO.description
+        cv.userId = updateDTO.userId
+        cv.pdf = updateDTO.pdf
+
+        try await cv.update(on: req.db)
+        return cv.toResponseDTO()
+    }
+
+    // Удаление CV
+    func deleteHandler(_ req: Request) async throws -> HTTPStatus {
+        guard let cvId = req.parameters.get("cvId", as: UUID.self) else {
+            throw Abort(.badRequest, reason: "Invalid CV ID format")
+        }
+
+        guard let cv = try await CV.find(cvId, on: req.db) else {
+            throw Abort(.notFound, reason: "CV with this ID does not exist")
+        }
+
+        try await cv.delete(on: req.db)
+        return .noContent
     }
 }

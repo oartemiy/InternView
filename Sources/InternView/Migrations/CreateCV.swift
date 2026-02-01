@@ -8,20 +8,20 @@
 import Fluent
 import Vapor
 
-struct CreateCV: Migration {
-    func prepare(on database: any FluentKit.Database) -> NIOCore.EventLoopFuture<Void> {
-        database.schema("CVs")
+struct CreateCV: AsyncMigration {
+    func prepare(on database: any Database) async throws {
+        try await database.schema("cvs")
             .id()
             .field("title", .string, .required)
             .field("description", .string, .required)
             .field("user_id", .string, .required)
             .field("pdf", .string, .required)
+            .field("created_at", .datetime)
+            .field("updated_at", .datetime)
             .create()
     }
-    
-    func revert(on database: any FluentKit.Database) -> NIOCore.EventLoopFuture<Void> {
-        database.schema("CVs").delete()
+
+    func revert(on database: any Database) async throws {
+        try await database.schema("cvs").delete()
     }
-    
-    
 }

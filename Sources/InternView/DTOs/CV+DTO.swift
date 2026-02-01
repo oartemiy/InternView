@@ -1,38 +1,38 @@
 //
-//  CVDTO.swift
+//  CV+DTO.swift
 //  InternView
 //
 //  Created by Артемий Образцов on 01.02.2026.
-//
+//  Data Transfer Object
 
 import Vapor
 
 extension CV {
-    // DTO для создания CV
-    struct CreateDTO: Content {
-        var title: String
-        var description: String
-        var user_id: String
-        var pdf: String
+    // DTO для создания и обновления CV
+    struct CreateUpdateDTO: Content {
+        let title: String
+        let description: String
+        let userId: String
+        let pdf: String
     }
 
     // DTO для ответа (чтения) CV
     struct ResponseDTO: Content {
-        var id: UUID
-        var title: String
-        var description: String
-        var user_id: String
-        var pdf: String
-        var created_at: Date?
-        var updated_at: Date?
+        let id: UUID
+        let title: String
+        let description: String
+        let userId: String
+        let pdf: String
+        let createdAt: Date?
+        let updatedAt: Date?
     }
 
-    // Конвертация из CreateDTO в CV модель
-    convenience init(from dto: CreateDTO) {
+    // Конвертация из DTO в CV модель
+    convenience init(from dto: CreateUpdateDTO) {
         self.init(
             title: dto.title,
             description: dto.description,
-            user_id: dto.user_id,
+            userId: dto.userId,
             pdf: dto.pdf
         )
     }
@@ -43,10 +43,10 @@ extension CV {
             id: self.id ?? UUID(),
             title: self.title,
             description: self.description,
-            user_id: self.user_id,
+            userId: self.userId,
             pdf: self.pdf,
-            created_at: self.created_at,
-            updated_at: self.updated_at
+            createdAt: self.createdAt,
+            updatedAt: self.updatedAt
         )
     }
 }
