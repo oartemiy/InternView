@@ -15,9 +15,6 @@ struct CreateCV: Migration {
             .field("title", .string, .required)
             .field("description", .string, .required)
             .field("user_id", .string, .required)
-//            .field("created_at", .datetime)
-//            .field("updated_at", .datetime)
-//            .field("deleted_at", .datetime)
             .field("pdf", .string, .required)
             .create()
     }

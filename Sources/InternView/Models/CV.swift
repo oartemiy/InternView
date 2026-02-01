@@ -23,15 +23,6 @@ final class CV: Model, Content, @unchecked Sendable {
     @Field(key: "user_id")
     var user_id: String
 
-//    @Timestamp(key: "created_at", on: .create, format: .iso8601)
-//    var createdAt: Date?
-//
-//    @Timestamp(key: "updated_at", on: .update, format: .iso8601)
-//    var updatedAt: Date?
-//
-//    @Timestamp(key: "deleted_at", on: .delete, format: .iso8601)
-//    var deletedAt: Date?
-
     @Field(key: "pdf")
     var pdf: String
 
