@@ -39,18 +39,6 @@ extension User {
         let createdAt: Date?
     }
 
-    // DTO для входа (логина)
-//    struct LoginDTO: Content {
-//        let login: String
-//        let password: String
-//    }
-
-    // DTO для ответа на логин
-//    struct LoginResponseDTO: Content {
-//        let user: ResponseDTO
-//        let message: String
-//    }
-
     // Конвертация из CreateDTO в User модель с хешированием пароля
     convenience init(from dto: CreateDTO, passwordHash: String) {
         self.init(
