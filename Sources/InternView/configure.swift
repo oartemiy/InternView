@@ -48,7 +48,8 @@ public func configure(_ app: Application) async throws {
     )
 
     app.migrations.add(CreateCV())
-    try app.autoMigrate().wait()
+    app.migrations.add(CreateUser())
+    try await app.autoMigrate().get()
     // register routes
     try routes(app)
 }

@@ -10,7 +10,7 @@ import Vapor
 
 struct CreateCV: AsyncMigration {
     func prepare(on database: any Database) async throws {
-        try await database.schema("cvs")
+        let schema = database.schema("cvs")
             .id()
             .field("title", .string, .required)
             .field("description", .string, .required)
@@ -18,7 +18,7 @@ struct CreateCV: AsyncMigration {
             .field("pdf", .string, .required)
             .field("created_at", .datetime)
             .field("updated_at", .datetime)
-            .create()
+        try await schema.create()
     }
 
     func revert(on database: any Database) async throws {

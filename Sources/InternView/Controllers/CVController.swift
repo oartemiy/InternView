@@ -9,16 +9,22 @@ import Fluent
 import Vapor
 
 struct CVController: RouteCollection {
-    func boot(routes: RoutesBuilder) throws {
+    func boot(routes: any RoutesBuilder) throws {
         let cvGroup = routes.grouped("cvs")
-        cvGroup.post(use: createHandler)
         cvGroup.get(use: getAllHandler)
         cvGroup.get(":cvId", use: getHandler)
-        cvGroup.put(":cvId", use: updateHandler)
-        cvGroup.delete(":cvId", use: deleteHandler)
+        
+        let basicMW = User.authenticator()
+        let guardMW = User.guardMiddleware()
+        let protected = cvGroup.grouped(basicMW, guardMW)
+        protected.post(use: createHandler)
+        protected.put(":cvId", use: updateHandler)
+        protected.delete(":cvId", use: deleteHandler)
     }
-
-    // Создание CV
+    
+    //MARK: CRUD
+    
+    //MARK: Create
     func createHandler(_ req: Request) async throws -> CV.ResponseDTO {
         let createDTO = try req.content.decode(CV.CreateUpdateDTO.self)
         let cv = CV(from: createDTO)
@@ -26,13 +32,13 @@ struct CVController: RouteCollection {
         return cv.toResponseDTO()
     }
 
-    // Получение всех CV
+    //MARK: Retrive All
     func getAllHandler(_ req: Request) async throws -> [CV.ResponseDTO] {
         let cvs = try await CV.query(on: req.db).all()
         return cvs.map { $0.toResponseDTO() }
     }
 
-    // Получение конкретного CV
+    //MARK: Retrive
     func getHandler(_ req: Request) async throws -> CV.ResponseDTO {
         guard let cvId = req.parameters.get("cvId", as: UUID.self) else {
             throw Abort(.badRequest, reason: "Invalid CV ID format")
@@ -45,7 +51,7 @@ struct CVController: RouteCollection {
         return cv.toResponseDTO()
     }
 
-    // Обновление CV - ВАЖНО: используем content.decode
+    //MARK: Update
     func updateHandler(_ req: Request) async throws -> CV.ResponseDTO {
         guard let cvId = req.parameters.get("cvId", as: UUID.self) else {
             throw Abort(.badRequest, reason: "Invalid CV ID format")
@@ -67,7 +73,7 @@ struct CVController: RouteCollection {
         return cv.toResponseDTO()
     }
 
-    // Удаление CV
+    //MARK: Delete
     func deleteHandler(_ req: Request) async throws -> HTTPStatus {
         guard let cvId = req.parameters.get("cvId", as: UUID.self) else {
             throw Abort(.badRequest, reason: "Invalid CV ID format")
