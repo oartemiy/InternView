@@ -9,7 +9,7 @@ import Fluent
 import Vapor
 
 final class CV: Model, Content, @unchecked Sendable {
-    static let schema: String = "cvs"  // В базе данных используем snake_case для таблиц
+    static let schema: String = "cvs"
 
     @ID(key: .id)
     var id: UUID?
@@ -20,8 +20,8 @@ final class CV: Model, Content, @unchecked Sendable {
     @Field(key: "description")
     var description: String
 
-    @Field(key: "user_id")  // В базе snake_case
-    var userId: String  // В модели camelCase
+    @Parent(key: "user_id")
+    var user: User
 
     @Field(key: "pdf")
     var pdf: String
@@ -38,7 +38,7 @@ final class CV: Model, Content, @unchecked Sendable {
         id: UUID? = nil,
         title: String,
         description: String,
-        userId: String,
+        userID: User.IDValue, // Теперь принимаем UUID пользователя
         pdf: String,
         createdAt: Date? = nil,
         updatedAt: Date? = nil
@@ -46,7 +46,7 @@ final class CV: Model, Content, @unchecked Sendable {
         self.id = id
         self.title = title
         self.description = description
-        self.userId = userId
+        self.$user.id = userID // Устанавливаем связь
         self.pdf = pdf
         self.createdAt = createdAt
         self.updatedAt = updatedAt

@@ -47,8 +47,10 @@ public func configure(_ app: Application) async throws {
         as: .psql
     )
 
-    app.migrations.add(CreateCV())
     app.migrations.add(CreateUser())
+    app.migrations.add(CreateCV())
+    app.migrations.add(CreateVacancy())
+    app.migrations.add(CreateVacancyApplication())
     try await app.autoMigrate().get()
     // register routes
     try routes(app)

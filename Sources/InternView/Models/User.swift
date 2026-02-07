@@ -19,8 +19,7 @@ final class User: Model, Content, @unchecked Sendable {
     @Field(key: "role") var role: String
     @Field(key: "profile_pic") var profilePic: String?
     @Field(key: "description") var description: String?
-    @Timestamp(key: "created_at", on: .create)
-    var createdAt: Date?
+    @Timestamp(key: "created_at", on: .create) var createdAt: Date?
     
     init() { }
     

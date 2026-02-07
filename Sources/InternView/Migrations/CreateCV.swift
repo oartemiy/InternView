@@ -10,15 +10,16 @@ import Vapor
 
 struct CreateCV: AsyncMigration {
     func prepare(on database: any Database) async throws {
-        let schema = database.schema("cvs")
+        try await database.schema("cvs")
             .id()
             .field("title", .string, .required)
             .field("description", .string, .required)
-            .field("user_id", .string, .required)
+            .field("user_id", .uuid, .required) // Меняем с .string на .uuid
+            .foreignKey("user_id", references: "users", "id", onDelete: .cascade) // Добавляем внешний ключ
             .field("pdf", .string, .required)
             .field("created_at", .datetime)
             .field("updated_at", .datetime)
-        try await schema.create()
+            .create()
     }
 
     func revert(on database: any Database) async throws {
