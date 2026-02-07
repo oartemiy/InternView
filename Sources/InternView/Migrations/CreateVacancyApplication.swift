@@ -10,14 +10,14 @@ import Vapor
 
 struct CreateVacancyApplication: AsyncMigration {
     func prepare(on database: any Database) async throws {
-        try await database.schema("vacancy_applications")
+        try await database.schema("applications")
             .id()
             .field("vacancy_id", .uuid, .required)
             .foreignKey("vacancy_id", references: "vacancies", "id", onDelete: .cascade)
             .field("intern_id", .uuid, .required)
             .foreignKey("intern_id", references: "users", "id", onDelete: .cascade)
-            .field("cv_id", .uuid)
-            .foreignKey("cv_id", references: "cvs", "id", onDelete: .setNull)
+            .field("cv_id", .uuid, .required) // Теперь .required!
+            .foreignKey("cv_id", references: "cvs", "id", onDelete: .cascade) // Теперь cascade!
             .field("status", .string, .required, .custom("DEFAULT 'pending'"))
             .field("cover_letter", .string)
             .field("resume_url", .string)
@@ -28,6 +28,6 @@ struct CreateVacancyApplication: AsyncMigration {
     }
     
     func revert(on database: any Database) async throws {
-        try await database.schema("vacancy_applications").delete()
+        try await database.schema("applications").delete()
     }
 }

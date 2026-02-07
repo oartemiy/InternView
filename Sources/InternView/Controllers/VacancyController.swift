@@ -238,7 +238,7 @@ struct VacancyController: RouteCollection {
         let applications = try await VacancyApplication.query(on: req.db)
             .filter(\.$vacancy.$id == vacancyId)
             .with(\.$intern)
-            .with(\.$cv)
+            .with(\.$cv) // Загружаем CV
             .sort(\.$appliedAt, .descending)
             .all()
 

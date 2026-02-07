@@ -56,26 +56,27 @@ struct VacancyApplicationController: RouteCollection {
             throw Abort(.conflict, reason: "You have already applied for this vacancy")
         }
         
-        // Если указано CV, проверяем что оно принадлежит пользователю
-        if let cvId = createDTO.cvId {
-            guard let cv = try await CV.find(cvId, on: req.db) else {
-                throw Abort(.notFound, reason: "CV not found")
-            }
-            
-            guard cv.$user.id == user.id else {
-                throw Abort(.forbidden, reason: "CV does not belong to you")
-            }
+        // Проверяем что CV существует и принадлежит пользователю
+        guard let cv = try await CV.find(createDTO.cvId, on: req.db) else {
+            throw Abort(.notFound, reason: "CV not found")
         }
         
-        let application = VacancyApplication(from: createDTO, internID: user.id!)
+        guard cv.$user.id == user.id else {
+            throw Abort(.forbidden, reason: "CV does not belong to you")
+        }
+        
+        // Создаем отклик
+        let application = VacancyApplication(
+            from: createDTO,
+            internID: user.id!
+        )
+        
         try await application.save(on: req.db)
         
         // Загружаем связанные данные
         try await application.$vacancy.load(on: req.db)
         try await application.$intern.load(on: req.db)
-        if let cvId = application.$cv.id {
-            application.cv = try await CV.find(cvId, on: req.db)
-        }
+        try await application.$cv.load(on: req.db)
         
         return application.toResponseDTO(
             intern: application.intern,
@@ -114,6 +115,7 @@ struct VacancyApplicationController: RouteCollection {
         guard let application = try await VacancyApplication.query(on: req.db)
             .filter(\.$id == applicationId)
             .with(\.$vacancy)
+            .with(\.$cv)
             .first() else {
             throw Abort(.notFound, reason: "Application not found")
         }
@@ -128,6 +130,10 @@ struct VacancyApplicationController: RouteCollection {
             }
             
             if let status = updateDTO.status {
+                // Проверяем, что статус валидный
+                guard ["pending", "reviewed", "approved", "rejected"].contains(status) else {
+                    throw Abort(.badRequest, reason: "Invalid status for recruiter")
+                }
                 application.status = status
             }
         } else if user.role == "intern" {
@@ -145,17 +151,19 @@ struct VacancyApplicationController: RouteCollection {
                 application.resumeURL = resumeUrl
             }
             
-            // Интерн может отменить отклик (статус cancelled)
-            if let status = updateDTO.status, status == "cancelled" {
+            // Интерн может отменить отклик (только статус cancelled)
+            if let status = updateDTO.status {
+                guard status == "cancelled" else {
+                    throw Abort(.badRequest, reason: "Intern can only cancel application")
+                }
                 application.status = status
             }
         }
         
         try await application.update(on: req.db)
         
-        // Загружаем обновленные данные
+        // Загружаем обновленные данные пользователя
         try await application.$intern.load(on: req.db)
-        try await application.$cv.load(on: req.db)
         
         return application.toResponseDTO(
             intern: application.intern,

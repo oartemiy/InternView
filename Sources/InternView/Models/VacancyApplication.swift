@@ -9,7 +9,7 @@ import Fluent
 import Vapor
 
 final class VacancyApplication: Model, Content, @unchecked Sendable {
-    static let schema = "vacancy_applications"
+    static let schema = "applications"
     
     @ID(key: .id)
     var id: UUID?
@@ -33,8 +33,8 @@ final class VacancyApplication: Model, Content, @unchecked Sendable {
     var resumeURL: String?
     
     // Ссылка на CV интерна
-    @OptionalParent(key: "cv_id")
-    var cv: CV?
+    @Parent(key: "cv_id")
+    var cv: CV
     
     @Timestamp(key: "applied_at", on: .create)
     var appliedAt: Date?
@@ -48,7 +48,7 @@ final class VacancyApplication: Model, Content, @unchecked Sendable {
         id: UUID? = nil,
         vacancyID: Vacancy.IDValue,
         internID: User.IDValue,
-        cvID: CV.IDValue? = nil,
+        cvID: CV.IDValue,
         status: String = "pending",
         coverLetter: String? = nil,
         resumeURL: String? = nil

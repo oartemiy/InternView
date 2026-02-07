@@ -1,10 +1,3 @@
-//
-//  VacancyApplication+DTO.swift
-//  InternView
-//
-//  Created by Артемий Образцов on 07.02.2026.
-//
-
 import Vapor
 
 extension VacancyApplication {
@@ -12,7 +5,7 @@ extension VacancyApplication {
         let vacancyId: UUID
         let coverLetter: String?
         let resumeUrl: String?
-        let cvId: UUID?
+        let cvId: UUID // Теперь обязательное!
     }
     
     struct UpdateDTO: Content {
@@ -25,7 +18,7 @@ extension VacancyApplication {
         let id: UUID
         let vacancyId: UUID
         let internId: UUID
-        let cvId: UUID?
+        let cvId: UUID // Теперь обязательное!
         let status: String
         let coverLetter: String?
         let resumeUrl: String?
@@ -38,7 +31,7 @@ extension VacancyApplication {
         self.init(
             vacancyID: dto.vacancyId,
             internID: internID,
-            cvID: dto.cvId,
+            cvID: dto.cvId, // Теперь обязательное!
             coverLetter: dto.coverLetter,
             resumeURL: dto.resumeUrl
         )
@@ -48,8 +41,12 @@ extension VacancyApplication {
         intern: User? = nil,
         cv: CV? = nil
     ) -> ResponseDTO {
+        guard let cv = cv else {
+            fatalError("CV must be loaded before converting to ResponseDTO")
+        }
+        
         let internDTO = intern?.toResponseDTO()
-        let cvDTO = cv?.toResponseDTO()
+        let cvDTO = cv.toResponseDTO()
         
         return ResponseDTO(
             id: self.id ?? UUID(),
