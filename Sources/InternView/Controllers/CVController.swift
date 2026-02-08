@@ -27,19 +27,17 @@ struct CVController: RouteCollection {
     
     //MARK: Create
     func createHandler(_ req: Request) async throws -> CV.ResponseDTO {
-        let createDTO = try req.content.decode(CV.CreateUpdateDTO.self)
-        
-        // Проверяем, существует ли пользователь
-        guard let user = try await User.find(createDTO.userId, on: req.db) else {
-            throw Abort(.notFound, reason: "User with ID \(createDTO.userId) not found")
-        }
+        let user = try req.auth.require(User.self)
         
         // Проверяем, что пользователь имеет роль intern
         guard user.role == UserRole.intern.rawValue else {
             throw Abort(.badRequest, reason: "Only users with 'intern' role can create CVs")
         }
         
-        let cv = CV(from: createDTO)
+        let createDTO = try req.content.decode(CV.CreateDTO.self)
+        
+        // Создаем CV с userID из авторизации
+        let cv = CV(from: createDTO, userID: user.id!)
         try await cv.save(on: req.db)
         
         // Загружаем данные пользователя для ответа
@@ -51,7 +49,7 @@ struct CVController: RouteCollection {
     func getAllHandler(_ req: Request) async throws -> [CV.ResponseDTO] {
         // Загружаем CV с данными пользователя
         let cvs = try await CV.query(on: req.db)
-            .with(\.$user) // Загружаем связанного пользователя
+            .with(\.$user)
             .all()
         
         return cvs.map { cv in
@@ -78,29 +76,25 @@ struct CVController: RouteCollection {
 
     //MARK: Update
     func updateHandler(_ req: Request) async throws -> CV.ResponseDTO {
+        let user = try req.auth.require(User.self)
+        
         guard let cvId = req.parameters.get("cvId", as: UUID.self) else {
             throw Abort(.badRequest, reason: "Invalid CV ID format")
         }
 
-        let updateDTO = try req.content.decode(CV.CreateUpdateDTO.self)
-
-        // Проверяем существование пользователя, если обновляется userId
-        if let user = try await User.find(updateDTO.userId, on: req.db) {
-            guard user.role == UserRole.intern.rawValue else {
-                throw Abort(.badRequest, reason: "Only users with 'intern' role can own CVs")
-            }
-        } else {
-            throw Abort(.notFound, reason: "User with ID \(updateDTO.userId) not found")
-        }
+        let updateDTO = try req.content.decode(CV.UpdateDTO.self)
 
         guard let cv = try await CV.find(cvId, on: req.db) else {
             throw Abort(.notFound, reason: "CV with this ID does not exist")
         }
+        
+        // Проверяем, что CV принадлежит пользователю
+        guard cv.$user.id == user.id else {
+            throw Abort(.forbidden, reason: "You can only update your own CVs")
+        }
 
-        cv.title = updateDTO.title
-        cv.description = updateDTO.description
-        cv.$user.id = updateDTO.userId // Обновляем связь с пользователем
-        cv.pdf = updateDTO.pdf
+        // Обновляем поля
+        cv.update(from: updateDTO)
 
         try await cv.update(on: req.db)
         
@@ -111,12 +105,19 @@ struct CVController: RouteCollection {
 
     //MARK: Delete
     func deleteHandler(_ req: Request) async throws -> HTTPStatus {
+        let user = try req.auth.require(User.self)
+        
         guard let cvId = req.parameters.get("cvId", as: UUID.self) else {
             throw Abort(.badRequest, reason: "Invalid CV ID format")
         }
 
         guard let cv = try await CV.find(cvId, on: req.db) else {
             throw Abort(.notFound, reason: "CV with this ID does not exist")
+        }
+        
+        // Проверяем, что CV принадлежит пользователю
+        guard cv.$user.id == user.id else {
+            throw Abort(.forbidden, reason: "You can only delete your own CVs")
         }
 
         try await cv.delete(on: req.db)

@@ -8,12 +8,18 @@
 import Vapor
 
 extension CV {
-    // DTO для создания и обновления CV
-    struct CreateUpdateDTO: Content {
+    // DTO для создания CV (теперь без userId)
+    struct CreateDTO: Content {
         let title: String
         let description: String
-        let userId: UUID // Теперь UUID вместо String
         let pdf: String
+    }
+    
+    // DTO для обновления CV
+    struct UpdateDTO: Content {
+        let title: String?
+        let description: String?
+        let pdf: String?
     }
 
     // DTO для ответа (чтения) CV
@@ -21,21 +27,34 @@ extension CV {
         let id: UUID
         let title: String
         let description: String
-        let userId: UUID // Теперь UUID вместо String
+        let userId: UUID
         let user: User.ResponseDTO? // Опционально, если нужно включать данные пользователя
         let pdf: String
         let createdAt: Date?
         let updatedAt: Date?
     }
 
-    // Конвертация из DTO в CV модель
-    convenience init(from dto: CreateUpdateDTO) {
+    // Конвертация из CreateDTO в CV модель (теперь с userID параметром)
+    convenience init(from dto: CreateDTO, userID: User.IDValue) {
         self.init(
             title: dto.title,
             description: dto.description,
-            userID: dto.userId, // Используем userID вместо userId
+            userID: userID,
             pdf: dto.pdf
         )
+    }
+    
+    // Конвертация из UpdateDTO в CV модель
+    func update(from dto: UpdateDTO) {
+        if let title = dto.title {
+            self.title = title
+        }
+        if let description = dto.description {
+            self.description = description
+        }
+        if let pdf = dto.pdf {
+            self.pdf = pdf
+        }
     }
 
     // Конвертация из CV модели в ResponseDTO (базовая версия без пользователя)
@@ -44,8 +63,8 @@ extension CV {
             id: self.id ?? UUID(),
             title: self.title,
             description: self.description,
-            userId: self.$user.id, // Получаем ID пользователя из связи
-            user: nil, // По умолчанию не включаем данные пользователя
+            userId: self.$user.id,
+            user: nil,
             pdf: self.pdf,
             createdAt: self.createdAt,
             updatedAt: self.updatedAt
@@ -60,7 +79,7 @@ extension CV {
             title: self.title,
             description: self.description,
             userId: self.$user.id,
-            user: userDTO, // Включаем данные пользователя если переданы
+            user: userDTO,
             pdf: self.pdf,
             createdAt: self.createdAt,
             updatedAt: self.updatedAt
