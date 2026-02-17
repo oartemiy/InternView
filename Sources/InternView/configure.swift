@@ -29,6 +29,8 @@ public func configure(_ app: Application) async throws {
         decoder: decoder,
         for: .json
     )
+    
+    app.routes.defaultMaxBodySize = "10mb"
 
     app.databases.use(
         DatabaseConfigurationFactory.postgres(
@@ -46,7 +48,9 @@ public func configure(_ app: Application) async throws {
         ),
         as: .psql
     )
-
+    
+    try createUploadDirectories(app: app)
+    
     app.migrations.add(CreateUser())
     app.migrations.add(CreateCV())
     app.migrations.add(CreateVacancy())
@@ -54,4 +58,17 @@ public func configure(_ app: Application) async throws {
     try await app.autoMigrate().get()
     // register routes
     try routes(app)
+}
+
+
+private func createUploadDirectories(app: Application) throws {
+    let fm = FileManager.default
+    let publicDir = app.directory.publicDirectory
+
+    for sub in ["uploads/cv", "uploads/profile"] {
+        let dir = publicDir + sub
+        if !fm.fileExists(atPath: dir) {
+            try fm.createDirectory(atPath: dir, withIntermediateDirectories: true)
+        }
+    }
 }

@@ -22,98 +22,129 @@ struct UserController: RouteCollection {
         protected.delete(":userId", use: deleteHandler)
     }
 
-    //MARK: CRUD
-    
-    //MARK: Create
+    // MARK: Create
     func createHandler(_ req: Request) async throws -> User.ResponseDTO {
         let createDTO = try req.content.decode(User.CreateDTO.self)
-        
+
         // Проверка роли
         guard let role = UserRole(rawValue: createDTO.role) else {
-            throw Abort(.badRequest, reason: "Invalid role. Must be 'intern' or 'recruiter'")
+            throw Abort(.badRequest, reason: "Invalid role")
         }
-        
-        // Проверка уникальности логина
-        let existingUser = try await User.query(on: req.db)
+
+        // Уникальность логина
+        let existing = try await User.query(on: req.db)
             .filter(\.$login == createDTO.login)
             .first()
-        
-        if existingUser != nil {
-            throw Abort(.conflict, reason: "User with this login already exists")
+        if existing != nil {
+            throw Abort(.conflict, reason: "Login already exists")
         }
-        
-        // Хеширование пароля
+
+        // Обработка фото
+        var profilePicPath: String?
+        if let file = createDTO.profilePicFile {
+            guard let ext = file.extension?.lowercased(),
+                  ["jpg", "jpeg", "png", "gif", "heic"].contains(ext) else {
+                throw Abort(.badRequest, reason: "Only image files are allowed")
+            }
+            guard file.data.readableBytes <= 5 * 1024 * 1024 else {
+                throw Abort(.badRequest, reason: "File too large (max 5 MB)")
+            }
+
+            let filename = "\(UUID().uuidString).\(ext)"
+            let path = req.application.directory.publicDirectory + "uploads/profile/" + filename
+            try await req.fileio.writeFile(file.data, at: path)
+            profilePicPath = "/uploads/profile/\(filename)"
+        }
+
         let hashedPassword = try Bcrypt.hash(createDTO.password)
-        
-        // Создание пользователя с хешированным паролем
-        let user = User(from: createDTO, passwordHash: hashedPassword)
+        let user = User(from: createDTO, passwordHash: hashedPassword, profilePicPath: profilePicPath)
         try await user.save(on: req.db)
-        
         return user.toResponseDTO()
     }
 
-    //MARK: Retrive All
+    // MARK: Retrieve All
     func getAllHandler(_ req: Request) async throws -> [User.ResponseDTO] {
         let users = try await User.query(on: req.db).all()
         return users.map { $0.toResponseDTO() }
     }
 
-    //MARK: Retrive
+    // MARK: Retrieve One
     func getHandler(_ req: Request) async throws -> User.ResponseDTO {
         guard let userId = req.parameters.get("userId", as: UUID.self) else {
-            throw Abort(.badRequest, reason: "Invalid User ID format")
+            throw Abort(.badRequest)
         }
-
         guard let user = try await User.find(userId, on: req.db) else {
-            throw Abort(.notFound, reason: "User with this ID does not exist")
+            throw Abort(.notFound)
         }
-
         return user.toResponseDTO()
     }
 
-    //MARK: Update
+    // MARK: Update
     func updateHandler(_ req: Request) async throws -> User.ResponseDTO {
         guard let userId = req.parameters.get("userId", as: UUID.self) else {
-            throw Abort(.badRequest, reason: "Invalid User ID format")
+            throw Abort(.badRequest)
         }
 
         let updateDTO = try req.content.decode(User.UpdateDTO.self)
 
         guard let user = try await User.find(userId, on: req.db) else {
-            throw Abort(.notFound, reason: "User with this ID does not exist")
+            throw Abort(.notFound)
         }
 
-        // Обновляем только те поля, которые переданы
+        // Обновляем текстовые поля
         if let name = updateDTO.name { user.name = name }
         if let login = updateDTO.login { user.login = login }
-        
-        // Если передан новый пароль - хешируем его
         if let newPassword = updateDTO.password {
-            let hashedPassword = try Bcrypt.hash(newPassword)
-            user.password = hashedPassword
+            user.password = try Bcrypt.hash(newPassword)
         }
-        
         if let role = updateDTO.role {
-            guard let _ = UserRole(rawValue: role) else {
-                throw Abort(.badRequest, reason: "Invalid role. Must be 'intern' or 'recruiter'")
+            guard UserRole(rawValue: role) != nil else {
+                throw Abort(.badRequest, reason: "Invalid role")
             }
             user.role = role
         }
-        if let profilePic = updateDTO.profilePic { user.profilePic = profilePic }
         if let description = updateDTO.description { user.description = description }
+
+        // Обработка нового фото
+        if let file = updateDTO.profilePicFile {
+            guard let ext = file.extension?.lowercased(),
+                  ["jpg", "jpeg", "png", "gif", "heic"].contains(ext) else {
+                throw Abort(.badRequest, reason: "Only image files are allowed")
+            }
+            guard file.data.readableBytes <= 5 * 1024 * 1024 else {
+                throw Abort(.badRequest, reason: "File too large (max 5 MB)")
+            }
+
+            let filename = "\(UUID().uuidString).\(ext)"
+            let path = req.application.directory.publicDirectory + "uploads/profile/" + filename
+            try await req.fileio.writeFile(file.data, at: path)
+
+            // Удаляем старый файл
+            if let oldPic = user.profilePic, !oldPic.isEmpty {
+                let oldPath = req.application.directory.publicDirectory + oldPic.replacingOccurrences(of: "/uploads/", with: "uploads/")
+                try? FileManager.default.removeItem(atPath: oldPath)
+            }
+
+            user.profilePic = "/uploads/profile/\(filename)"
+        }
 
         try await user.update(on: req.db)
         return user.toResponseDTO()
     }
 
-    //MARK: Delete
+    // MARK: Delete
     func deleteHandler(_ req: Request) async throws -> HTTPStatus {
         guard let userId = req.parameters.get("userId", as: UUID.self) else {
-            throw Abort(.badRequest, reason: "Invalid User ID format")
+            throw Abort(.badRequest)
+        }
+        guard let user = try await User.find(userId, on: req.db) else {
+            throw Abort(.notFound)
         }
 
-        guard let user = try await User.find(userId, on: req.db) else {
-            throw Abort(.notFound, reason: "User with this ID does not exist")
+        // Удаляем фото, если есть
+        if let pic = user.profilePic, !pic.isEmpty {
+            let filePath = req.application.directory.publicDirectory + pic.replacingOccurrences(of: "/uploads/", with: "uploads/")
+            try? FileManager.default.removeItem(atPath: filePath)
         }
 
         try await user.delete(on: req.db)

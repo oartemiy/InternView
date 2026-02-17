@@ -8,27 +8,27 @@
 import Vapor
 
 extension User {
-    // DTO для создания пользователя
+    // DTO для создания пользователя (фото опционально)
     struct CreateDTO: Content {
         let name: String
         let login: String
-        let password: String  // Пароль в открытом виде
+        let password: String
         let role: String
-        let profilePic: String?
         let description: String?
+        var profilePicFile: File?      // опциональный файл
     }
 
-    // DTO для обновления пользователя
+    // DTO для обновления (все опционально)
     struct UpdateDTO: Content {
         let name: String?
         let login: String?
-        let password: String?  // Пароль в открытом виде (опционально)
+        let password: String?
         let role: String?
-        let profilePic: String?
         let description: String?
+        var profilePicFile: File?      // новый файл фото
     }
 
-    // DTO для ответа (чтения) пользователя
+    // DTO для ответа (без изменений)
     struct ResponseDTO: Content {
         let id: UUID
         let name: String
@@ -39,19 +39,19 @@ extension User {
         let createdAt: Date?
     }
 
-    // Конвертация из CreateDTO в User модель с хешированием пароля
-    convenience init(from dto: CreateDTO, passwordHash: String) {
+    // Конвертация из CreateDTO в модель
+    convenience init(from dto: CreateDTO, passwordHash: String, profilePicPath: String?) {
         self.init(
             name: dto.name,
             login: dto.login,
-            password: passwordHash,  // Используем хешированный пароль
+            password: passwordHash,
             role: dto.role,
-            profilePic: dto.profilePic,
+            profilePic: profilePicPath,
             description: dto.description
         )
     }
 
-    // Конвертация из User модели в ResponseDTO
+    // Конвертация в ResponseDTO
     func toResponseDTO() -> ResponseDTO {
         ResponseDTO(
             id: self.id ?? UUID(),
