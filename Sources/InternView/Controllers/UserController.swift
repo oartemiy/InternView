@@ -11,6 +11,7 @@ import Vapor
 struct UserController: RouteCollection {
     func boot(routes: any RoutesBuilder) throws {
         let userGroup = routes.grouped("users")
+        userGroup.post("login", use: loginHandler)
         userGroup.post(use: createHandler)
         userGroup.get(use: getAllHandler)
         userGroup.get(":userId", use: getHandler)
@@ -129,6 +130,31 @@ struct UserController: RouteCollection {
         }
 
         try await user.update(on: req.db)
+        return user.toResponseDTO()
+    }
+    
+    // MARK: - Login
+    func loginHandler(_ req: Request) async throws -> User.ResponseDTO {
+        // Декодируем JSON с логином и паролем
+        struct LoginRequest: Content {
+            let login: String
+            let password: String
+        }
+        let loginRequest = try req.content.decode(LoginRequest.self)
+        
+        // Ищем пользователя по логину
+        guard let user = try await User.query(on: req.db)
+            .filter(\.$login == loginRequest.login)
+            .first() else {
+            throw Abort(.unauthorized, reason: "Invalid credentials")
+        }
+        
+        // Проверяем пароль
+        guard try user.verify(password: loginRequest.password) else {
+            throw Abort(.unauthorized, reason: "Invalid credentials")
+        }
+        
+        // Возвращаем пользователя (без пароля)
         return user.toResponseDTO()
     }
 
