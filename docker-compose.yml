@@ -32,6 +32,8 @@ services:
       context: .
     environment:
       <<: *shared_environment
+    volumes:
+      - ./uploads:/app/Public/uploads
     depends_on:
       - db
     ports:
