@@ -6,19 +6,48 @@
 //
 
 import SwiftUI
+import SwiftData
 
 struct ContentView: View {
+    @EnvironmentObject var authService: AuthService
+    @Environment(\.modelContext) private var modelContext
+
     var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
+        Group {
+            if authService.isAuthenticated {
+                MainTabView()
+            } else {
+                LoginView()
+            }
         }
-        .padding()
+        .onAppear {
+            authService.setupModelContext(modelContext)
+        }
     }
 }
 
-#Preview {
-    ContentView()
+struct MainTabView: View {
+    @EnvironmentObject var authService: AuthService
+    
+    var body: some View {
+        TabView {
+            Text("Вакансии")
+                .tabItem {
+                    Label("Поиск", systemImage: "magnifyingglass")
+                }
+            
+            if authService.currentUser?.role == "intern" {
+                Text("Мои CV")
+                    .tabItem {
+                        Label("Резюме", systemImage: "doc")
+                    }
+            }
+            
+            ProfileView()
+                .tabItem {
+                    Label("Профиль", systemImage: "person")
+                }
+        }
+    }
 }
+

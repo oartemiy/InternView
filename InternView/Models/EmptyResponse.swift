@@ -6,3 +6,10 @@
 //
 
 import Foundation
+
+struct EmptyResponse: Codable {
+    init() {}
+    init(from decoder: Decoder) throws {
+        // ничего не делаем, тело пустое
+    }
+}
