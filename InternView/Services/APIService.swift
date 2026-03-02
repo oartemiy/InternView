@@ -54,8 +54,11 @@ class APIService {
         }
 
         if let body = body {
+            let encoder = JSONEncoder()
+                encoder.dateEncodingStrategy = .iso8601
+                encoder.keyEncodingStrategy = .convertToSnakeCase
             do {
-                request.httpBody = try JSONEncoder().encode(body)
+                request.httpBody = try encoder.encode(body)
             } catch {
                 print("❌ Body encoding error: \(error)")
                 throw APIError.unknown("Body encoding error: \(error.localizedDescription)")

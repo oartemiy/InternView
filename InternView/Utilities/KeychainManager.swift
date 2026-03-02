@@ -10,7 +10,7 @@ import Security
 
 class KeychainManager {
     static let shared = KeychainManager()
-    private let service = "com.yourapp.internview"
+    private let service = "com.oartemiy.internview"
 
     func save(_ value: String, for key: String) {
         guard let data = value.data(using: .utf8) else { return }

@@ -36,11 +36,26 @@ struct MainTabView: View {
                     Label("Поиск", systemImage: "magnifyingglass")
                 }
             
+            
+            
             if authService.currentUser?.role == "intern" {
-                Text("Мои CV")
+                MyApplicationsView()
+                    .tabItem {
+                        Label("Отклики", systemImage: "envelope")
+                    }
+                CVListView()
                     .tabItem {
                         Label("Резюме", systemImage: "doc")
                     }
+            }
+            
+            if authService.currentUser?.role == "recruiter" {
+                MyVacanciesView()
+                    .tabItem {
+                        Label("Мои вакансии", systemImage: "briefcase")
+                    }
+                // Можно добавить вкладку для поиска всех вакансий (VacancyListView)
+
             }
             
             ProfileView()
