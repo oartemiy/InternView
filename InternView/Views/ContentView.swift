@@ -31,21 +31,25 @@ struct MainTabView: View {
     
     var body: some View {
         TabView {
-            Text("Вакансии")
-                .tabItem {
-                    Label("Поиск", systemImage: "magnifyingglass")
-                }
+//            Text("Вакансии")
+//                .tabItem {
+//                    Label("Поиск", systemImage: "magnifyingglass")
+//                }
             
             
             
             if authService.currentUser?.role == "intern" {
-                MyApplicationsView()
+                VacancyListView()
                     .tabItem {
-                        Label("Отклики", systemImage: "envelope")
+                        Label("Вакансии", systemImage: "magnifyingglass")
                     }
                 CVListView()
                     .tabItem {
-                        Label("Резюме", systemImage: "doc")
+                        Label("Мои CV", systemImage: "doc")
+                    }
+                MyApplicationsView()
+                    .tabItem {
+                        Label("Отклики", systemImage: "envelope")
                     }
             }
             
@@ -54,7 +58,6 @@ struct MainTabView: View {
                     .tabItem {
                         Label("Мои вакансии", systemImage: "briefcase")
                     }
-                // Можно добавить вкладку для поиска всех вакансий (VacancyListView)
 
             }
             
